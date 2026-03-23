@@ -1,4 +1,8 @@
-const supabase = require('../supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const authenticate = (event) => {
   const cookies = event.headers.cookie || '';
@@ -15,66 +19,30 @@ const authenticate = (event) => {
 
 exports.handler = async (event, context) => {
   const user = authenticate(event);
-  if (!user) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
-  }
-
-  const slug = event.path.split('/').pop();
+  if (!user) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
 
   if (event.httpMethod === 'GET') {
-    if (slug && slug !== 'categories') {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-      return error
-        ? { statusCode: 404, body: JSON.stringify({ error: 'Not found' }) }
-        : { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
-    }
-
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('sort_order', { ascending: true });
+    const { data, error } = await supabase.from('categories').select('*').order('sort_order', { ascending: true });
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data || []) };
   }
 
   if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body);
     const slug = body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({ ...body, slug })
-      .select()
-      .single();
-    
-    return error
-      ? { statusCode: 500, body: JSON.stringify({ error: error.message }) }
-      : { statusCode: 201, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+    const { data, error } = await supabase.from('categories').insert({ ...body, slug }).select().single();
+    return error ? { statusCode: 500, body: JSON.stringify({ error: error.message }) } : { statusCode: 201, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
   }
 
   if (event.httpMethod === 'PUT') {
     const body = JSON.parse(event.body);
-    const { data, error } = await supabase
-      .from('categories')
-      .update(body)
-      .eq('id', body.id)
-      .select()
-      .single();
-    
-    return error
-      ? { statusCode: 500, body: JSON.stringify({ error: error.message }) }
-      : { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+    const { data, error } = await supabase.from('categories').update(body).eq('id', body.id).select().single();
+    return error ? { statusCode: 500, body: JSON.stringify({ error: error.message }) } : { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
   }
 
   if (event.httpMethod === 'DELETE') {
     const id = event.queryStringParameters.id;
     const { error } = await supabase.from('categories').delete().eq('id', id);
-    return error
-      ? { statusCode: 500, body: JSON.stringify({ error: error.message }) }
-      : { statusCode: 200, body: JSON.stringify({ success: true }) };
+    return error ? { statusCode: 500, body: JSON.stringify({ error: error.message }) } : { statusCode: 200, body: JSON.stringify({ success: true }) };
   }
 
   return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };

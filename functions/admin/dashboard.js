@@ -1,22 +1,20 @@
-const supabase = require('../supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const authenticate = (event) => {
   const cookies = event.headers.cookie || '';
   const tokenCookie = cookies.split(';').find(c => c.trim().startsWith('auth_token='));
-  
   if (!tokenCookie) return null;
-  
   try {
     const token = tokenCookie.split('=')[1].trim();
     const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
-    
     if (decoded.exp < Date.now()) return null;
     if (decoded.role !== 'admin') return null;
-    
     return decoded;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 };
 
 exports.handler = async (event, context) => {
@@ -42,37 +40,19 @@ exports.handler = async (event, context) => {
       supabase.from('categories').select('*', { count: 'exact', head: true })
     ]);
 
-    const { data: recentOrders } = await supabase
-      .from('orders')
-      .select('*, users(name, email)')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    const { data: lowStockProducts } = await supabase
-      .from('products')
-      .select('id, name, stock')
-      .lt('stock', 10)
-      .limit(5);
+    const { data: recentOrders } = await supabase.from('orders').select('*, users(name, email)').order('created_at', { ascending: false }).limit(5);
+    const { data: lowStockProducts } = await supabase.from('products').select('id, name, stock').lt('stock', 10).limit(5);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        stats: {
-          totalUsers,
-          totalOrders,
-          totalProducts,
-          totalCategories,
-          pendingOrders: 0
-        },
+        stats: { totalUsers, totalOrders, totalProducts, totalCategories, pendingOrders: 0 },
         recentOrders: recentOrders || [],
         lowStockProducts: lowStockProducts || []
       })
     };
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Server error', details: err.message })
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: 'Server error', details: err.message }) };
   }
 };

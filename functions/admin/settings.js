@@ -1,4 +1,8 @@
-const supabase = require('../supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const authenticate = (event) => {
   const cookies = event.headers.cookie || '';
@@ -15,40 +19,21 @@ const authenticate = (event) => {
 
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'GET') {
-    const { data, error } = await supabase
-      .from('settings')
-      .select('key, value');
-
-    if (error) {
-      return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-    }
-
+    const { data, error } = await supabase.from('settings').select('key, value');
+    if (error) return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     const settings = {};
-    (data || []).forEach(s => {
-      settings[s.key] = s.value;
-    });
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
-    };
+    (data || []).forEach(s => { settings[s.key] = s.value; });
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) };
   }
 
   const user = authenticate(event);
-  if (!user) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
-  }
+  if (!user) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
 
   if (event.httpMethod === 'POST') {
     const body = JSON.parse(event.body);
-
     for (const [key, value] of Object.entries(body)) {
-      await supabase
-        .from('settings')
-        .upsert({ key, value, type: typeof value === 'number' ? 'number' : 'text' }, { onConflict: 'key' });
+      await supabase.from('settings').upsert({ key, value, type: typeof value === 'number' ? 'number' : 'text' }, { onConflict: 'key' });
     }
-
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   }
 

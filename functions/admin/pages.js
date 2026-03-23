@@ -1,4 +1,8 @@
-const supabase = require('../supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const authenticate = (event) => {
   const cookies = event.headers.cookie || '';
@@ -15,37 +19,18 @@ const authenticate = (event) => {
 
 exports.handler = async (event, context) => {
   const user = authenticate(event);
-  if (!user) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
-  }
+  if (!user) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
 
   if (event.httpMethod === 'GET') {
-    const { data, error } = await supabase
-      .from('pages')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data || [])
-    };
+    const { data, error } = await supabase.from('pages').select('*').order('created_at', { ascending: false });
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data || []) };
   }
 
   if (event.httpMethod === 'PUT') {
     const body = JSON.parse(event.body);
     const { id, ...updateData } = body;
-
-    const { data, error } = await supabase
-      .from('pages')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    return error
-      ? { statusCode: 500, body: JSON.stringify({ error: error.message }) }
-      : { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+    const { data, error } = await supabase.from('pages').update(updateData).eq('id', id).select().single();
+    return error ? { statusCode: 500, body: JSON.stringify({ error: error.message }) } : { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
   }
 
   return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };

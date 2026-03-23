@@ -1,34 +1,17 @@
 [build]
   command = ""
-  functions = "functions"
   publish = "public"
-
-[dev]
-  command = ""
-  port = 8888
-  targetPort = 8888
+  functions = "functions"
 
 [functions]
   node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/admin/*"
-  to = "/admin/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/api/*"
+  from = "/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[headers]]
-  for = "/admin/*"
-  [headers.values]
-    Cache-Control = "no-cache"
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
