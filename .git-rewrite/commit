@@ -1,0 +1,7 @@
+tree 223da504ff0b901fc014630f55539d7994031318
+parent 52cdfc744d5c7c378c5a2dee78484f138efbd679
+parent 59b1070bd08f1d5308fdd38bb415c3f5d1cb2115
+author wmzarafat-boop <wmzarafat@gmail.com> 1774306691 -0500
+committer wmzarafat-boop <wmzarafat@gmail.com> 1774306691 -0500
+
+WIP on main: 52cdfc7 Fix login to handle plain text passwords
