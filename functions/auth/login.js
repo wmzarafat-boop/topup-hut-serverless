@@ -23,7 +23,10 @@ exports.handler = async (event, context) => {
       return { statusCode: 401, body: JSON.stringify({ error: 'Invalid credentials' }) };
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    let validPassword = password === user.password;
+    if (!validPassword && user.password.startsWith('$2')) {
+      validPassword = await bcrypt.compare(password, user.password);
+    }
 
     if (!validPassword) {
       return { statusCode: 401, body: JSON.stringify({ error: 'Invalid credentials' }) };
